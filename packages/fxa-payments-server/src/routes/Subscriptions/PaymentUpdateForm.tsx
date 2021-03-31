@@ -28,6 +28,7 @@ import { ButtonBaseProps } from '../../components/PayPalButton';
 import PaymentProviderDetails from '../../components/PaymentProviderDetails';
 
 import { ActionButton } from './ActionButton';
+import { LoadingOverlay } from '../../components/LoadingOverlay';
 
 const PaypalButton = React.lazy(() => import('../../components/PayPalButton'));
 
@@ -66,12 +67,14 @@ export const PaymentUpdateForm = ({
   const [submitNonce, refreshSubmitNonce] = useNonce();
   const [updateRevealed, revealUpdate, hideUpdate] = useBooleanState();
   const [inProgress, setInProgress, resetInProgress] = useBooleanState(false);
+  const [transactionInProgress, setTransactionInProgress] = useState(false);
 
   const [
     fixPaymentModalRevealed,
     revealFixPaymentModal,
     hideFixPaymentModal,
   ] = useBooleanState(false);
+
   const [paymentError, setPaymentError] = useState<PaymentUpdateError>(
     paymentErrorInitialState
   );
@@ -101,17 +104,46 @@ export const PaymentUpdateForm = ({
     />
   );
 
-  const errorAlertBarContent = (
+  const billingAgreementErrorAlertBarContent = () => (
     <Localized
-      id="sub-route-invalid-payment-alert"
+      id="sub-route-missing-billing-agreement-payment-alert"
       elems={{ div: actionButton }}
     >
       <span>
-        Invalid payment information, there is an error with your account.{' '}
+        Invalid payment information; there is an error with your account.{' '}
         {actionButton}
       </span>
     </Localized>
   );
+
+  const fundingSourceErrorAlertBarContent = () => (
+    <Localized
+      id="sub-route-funding-source-payment-alert"
+      elems={{ div: actionButton }}
+    >
+      <span>
+        Invalid payment information; there is an error with your account. This
+        alert may take some time to clear after you successfully update your
+        information. {actionButton}
+      </span>
+    </Localized>
+  );
+
+  const getPaypalErrorAlertBarContent = () => {
+    switch (paypal_payment_error) {
+      case 'missing_agreement': {
+        return billingAgreementErrorAlertBarContent();
+      }
+      case 'funding_source': {
+        return fundingSourceErrorAlertBarContent();
+      }
+      default: {
+        return null;
+      }
+    }
+  };
+
+  const errorAlertBarContent = getPaypalErrorAlertBarContent();
 
   const { config } = useContext(AppContext);
   const [paypalScriptLoaded, setPaypalScriptLoaded] = useState(false);
@@ -177,13 +209,17 @@ export const PaymentUpdateForm = ({
           </AlertBar>
         )}
 
-        {paypal_payment_error && (
+        {!transactionInProgress && paypal_payment_error && (
           <AlertBar className="alert alertError">
             {errorAlertBarContent}
           </AlertBar>
         )}
 
-        {fixPaymentModalRevealed && (
+        {transactionInProgress && (
+          <LoadingOverlay isLoading={transactionInProgress} />
+        )}
+
+        {!transactionInProgress && fixPaymentModalRevealed && (
           <DialogMessage
             data-testid="billing-info-modal"
             onDismiss={hideFixPaymentModal}
@@ -199,7 +235,6 @@ export const PaymentUpdateForm = ({
                 to take the necessary steps to resolve this payment issue.
               </p>
             </Localized>
-
             {paypalScriptLoaded && (
               <Suspense fallback={<div>Loading...</div>}>
                 <div className="paypal-button">
@@ -211,6 +246,8 @@ export const PaymentUpdateForm = ({
                     newPaypalAgreement={false}
                     refreshSubscriptions={refreshSubscriptions}
                     setPaymentError={setPaymentError}
+                    apiClientOverrides={apiClientOverrides}
+                    setTransactionInProgress={setTransactionInProgress}
                     ButtonBase={paypalButtonBase}
                   />
                 </div>

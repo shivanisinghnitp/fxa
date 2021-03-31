@@ -4,6 +4,7 @@ import ReactDOM from 'react-dom';
 import * as apiClient from '../../lib/apiClient';
 import { Customer } from '../../store/types';
 import { SubscriptionCreateAuthServerAPIs } from '../../routes/Product/SubscriptionCreate';
+import { PaymentUpdateAuthServerAPIs } from '../../routes/Subscriptions/PaymentUpdateForm';
 
 declare var paypal: {
   Buttons: {
@@ -19,7 +20,9 @@ export type PaypalButtonProps = {
   setPaymentError: Function;
   priceId?: string;
   newPaypalAgreement?: boolean;
-  apiClientOverrides?: Partial<SubscriptionCreateAuthServerAPIs>;
+  apiClientOverrides?: Partial<
+    SubscriptionCreateAuthServerAPIs | PaymentUpdateAuthServerAPIs
+  >;
   setTransactionInProgress?: Function;
   ButtonBase?: React.ElementType;
 };
